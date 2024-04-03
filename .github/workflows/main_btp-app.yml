@@ -1,7 +1,8 @@
 # Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
 # More GitHub Actions for Azure: https://github.com/Azure/actions
+# More info on Python, GitHub Actions, and Azure App Service: https://aka.ms/python-webapps-actions
 
-name: Build and deploy Node.js app to Azure Web App - btp-app
+name: Build and deploy Python app to Azure Web App - btp-app
 
 on:
   push:
@@ -11,27 +12,36 @@ on:
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Node.js version
-        uses: actions/setup-node@v3
+      - name: Set up Python version
+        uses: actions/setup-python@v1
         with:
-          node-version: '20.x'
+          python-version: '3.9'
 
-      - name: npm install, build, and test
+      - name: Create and start virtual environment
         run: |
-          npm install
-          npm run build --if-present
-          npm run test --if-present
+          python -m venv venv
+          source venv/bin/activate
       
-      - name: Upload artifact for deployment job
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+        
+      # Optional: Add step to run tests here (PyTest, Django test suites, etc.)
+
+      - name: Zip artifact for deployment
+        run: zip release.zip ./* -r
+
+      - name: Upload artifact for deployment jobs
         uses: actions/upload-artifact@v3
         with:
-          name: node-app
-          path: .
+          name: python-app
+          path: |
+            release.zip
+            !venv/
 
   deploy:
     runs-on: ubuntu-latest
@@ -46,14 +56,18 @@ jobs:
       - name: Download artifact from build job
         uses: actions/download-artifact@v3
         with:
-          name: node-app
+          name: python-app
+
+      - name: Unzip artifact for deployment
+        run: unzip release.zip
+
       
       - name: Login to Azure
         uses: azure/login@v1
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_80183139E78F49A391C86DF1EC5C0601 }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_791B1D523C55431DA54B5226863363E2 }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_8201A018B0584D78BFFB197C4D430ED2 }}
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_5F2356D7D7F84810BC7A8B2D5CF91D53 }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_50467E6EC53E4DD3A5010D84D776A38E }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_F7EA7E9181AB4276931CF254E43250CC }}
 
       - name: 'Deploy to Azure Web App'
         uses: azure/webapps-deploy@v2
@@ -61,5 +75,4 @@ jobs:
         with:
           app-name: 'btp-app'
           slot-name: 'Production'
-          package: .
           
